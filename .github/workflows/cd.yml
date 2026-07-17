@@ -1,51 +1,25 @@
-name: CD Deploy
+name: CD Pipeline
 
 on:
+  push:
+    branches: ["main"]
+
   workflow_run:
-    workflows:
-      - Build
+    workflows: ["Build"]
     types:
       - completed
 
-
 jobs:
-
   deploy:
-
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-
     runs-on: self-hosted
 
     steps:
 
-      - name: Login to Docker Hub
-        run: |
-          docker login \
-          -u ${{ secrets.DOCKER_USERNAME }} \
-          -p ${{ secrets.DOCKER_PASSWORD }}
+      - name: Pull Docker image
+        run: docker pull ${{ secrets.DOCKER_USERNAME }}/spring-auth:latest
 
+      - name: Delete Old Docker Container
+        run: docker rm -f spring-auth-container
 
-      - name: Pull latest image
-        run: |
-          docker pull \
-          ${{ secrets.DOCKER_USERNAME }}/spring-auth:latest
-
-
-      - name: Remove old container
-        shell: powershell
-        run: |
-          $container = docker ps -aq -f "name=spring-auth"
-
-          if ($container) {
-              docker stop spring-auth
-              docker rm spring-auth
-          }
-
-
-      - name: Run new container
-        shell: powershell
-        run: |
-          docker run -d `
-          --name spring-auth `
-          -p 8080:8080 `
-          ${{ secrets.DOCKER_USERNAME }}/spring-auth:latest
+      - name: Run Docker Container
+        run: docker run -d -p 8001:8001 --name spring-auth-container ${{ secrets.DOCKER_USERNAME }}/spring-auth:latest
