@@ -1,0 +1,95 @@
+package com.auth.demo.controller;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import com.auth.demo.Entity.User;
+import com.auth.demo.apiResponces.ApiResponse;
+import com.auth.demo.dto.UserRequestDTO;
+import com.auth.demo.exception.AppException;
+
+import jakarta.validation.Valid;
+
+@RestController
+@RequestMapping("auth")
+public class AuthController {
+
+    private final List<User> users = new ArrayList<>();
+
+    // GET all users
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<User>>> getAllUsers() {
+
+        ApiResponse<List<User>> response = new ApiResponse<>(users, "Users fetched successfully");
+
+        return ResponseEntity.ok(response);
+    }
+
+    // GET user by ID
+    @GetMapping("{id}")
+    public ResponseEntity<ApiResponse<User>> getUserById(@PathVariable UUID id) {
+
+        User user = findUserOrThrow(id);
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(user, "User fetched successfully"));
+    }
+
+    // CREATE new user
+    @PostMapping
+    public ResponseEntity<ApiResponse<User>> createUser(@RequestBody @Valid UserRequestDTO data) {
+
+        User user = new User(
+                UUID.randomUUID(),
+                data.getUsername(),
+                data.getEmail(),
+                data.getAge());
+
+        users.add(user);
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(new ApiResponse<>(user, "User created successfully"));
+    }
+
+    // UPDATE user
+    @PutMapping("{id}")
+    public ResponseEntity<ApiResponse<User>> updateUser(
+            @PathVariable UUID id,
+            @RequestBody User data) {
+
+        User user = findUserOrThrow(id);
+
+        user.setUsername(data.getUsername());
+        user.setEmail(data.getEmail());
+        user.setAge(data.getAge());
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(user, "User updated successfully"));
+    }
+
+    // DELETE user
+    @DeleteMapping("{id}")
+    public ResponseEntity<ApiResponse<Object>> deleteUser(@PathVariable UUID id) {
+
+        User user = findUserOrThrow(id);
+
+        users.remove(user);
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(null, "User deleted successfully"));
+    }
+
+    // reusable method (clean code)
+    private User findUserOrThrow(UUID id) {
+        return users.stream()
+                .filter(u -> u.getId().equals(id))
+                .findFirst()
+                .orElseThrow(() -> AppException.resourceNotFound("User not found"));
+    }
+}
