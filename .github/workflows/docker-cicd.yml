@@ -1,0 +1,32 @@
+deploy:
+
+  needs: build
+
+  runs-on: self-hosted
+
+  steps:
+
+    - name: Login to Docker Hub
+      run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Pull latest image
+      run: docker pull ${{ secrets.DOCKER_USERNAME }}/spring-auth:latest
+
+    - name: Remove old container if exists
+      shell: powershell
+      run: |
+        $container = docker ps -aq -f "name=spring-auth"
+
+        if ($container) {
+            Write-Host "Container exists. Removing..."
+
+            docker stop spring-auth
+            docker rm spring-auth
+        }
+        else {
+            Write-Host "Container does not exist."
+        }
+
+    - name: Run new container
+      run: |
+        docker run -d --name spring-auth -p 8080:8080 ${{ secrets.DOCKER_USERNAME }}/spring-auth:latest
